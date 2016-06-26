@@ -55,19 +55,55 @@ angular.module('ionicApp', ['ionic','ngCordova'] )
     })
 
     .controller('HomeTabCtrl', function ($scope, $cordovaLocalNotification,$timeout,$cordovaGeolocation) {
+        var frame = document.getElementById("mapFrame").contentWindow;
+        function callGeolocation(success,error){
+             var posOptions = {timeout: 5000, enableHighAccuracy: false };
+             $cordovaGeolocation.getCurrentPosition(posOptions).then(success, function(){
+                 var posOptions = {timeout: 10000, enableHighAccuracy: true};
+                 $cordovaGeolocation.getCurrentPosition(posOptions).then(success,error );
+             });
+       }
 
-      //$scope.$watch('$viewContentLoaded', function() {
-      //  var posOptions = {timeout: 10000, enableHighAccuracy: false};
-      //  $cordovaGeolocation
-      //      .getCurrentPosition(posOptions)
-      //      .then(function (position) {
-      //        var lat  = position.coords.latitude
-      //        var long = position.coords.longitude
-      //        alert(lat);
-      //      }, function(err) {
-      //        alert('error'+err);
-      //      });
-      //});
+        var msgListenFuncs={
+            "carMove":function(data){
+                callGeolocation(this.carMoveCallBack,this.errorCallBack);
+            },
+            "carMoveCallBack":function(data){
+                var pos = [data.coords.longitude, data.coords.latitude];
+                var param = {"msgKey":"carMove","data":pos};
+                frame.postMessage(param, "*");
+            },
+            "initMap":function(data){
+                callGeolocation(this.initMapCallBack,this.errorCallBack);
+            }, "initMapCallBack":function(data){
+                var pos = [data.coords.longitude, data.coords.latitude];
+                var param = {"msgKey":"initMap","data":pos};
+                frame.postMessage(param, "*");
+            }, "errorCallBack":function(data){
+                alert('code: ' + data.code + '\n' +
+                'message: ' + data.message + '\n');
+            }
+        };
+
+
+
+      $scope.$watch('$viewContentLoaded', function() {
+
+          window.addEventListener('message', function (event) {
+              if (event.source == window)
+                  return;
+              //确保发送消息的域名是已知的域名
+              var msg = event.data["msgKey"];
+              msgListenFuncs[msg](event.data);
+
+
+          });
+
+
+
+
+
+      });
 
 
 
