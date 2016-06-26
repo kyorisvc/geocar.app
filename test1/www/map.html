@@ -1,3 +1,7 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
 <link href="lib/ionic/css/ionic.css" rel="stylesheet">
 <link rel="stylesheet" href="http://cache.amap.com/lbs/static/main1119.css"/>
 <script src="http://webapi.amap.com/maps?v=1.3&key=b525aaba2a78eef9d75408b9ec8b967d"></script>
@@ -5,53 +9,106 @@
 <style>
 
 
-    #searchStat{
-        z-index: 99;
-        padding: 0 ;
-        border: 0px solid silver;
-        position: absolute;
-        top:85vh;
-        right:5vh;
+#searchStat {
+    z-index: 99;
+    padding: 0;
+    border: 0px solid silver;
+    position: absolute;
+    top: 85vh;
+    right: 5vh;
 
-    }
-    #showMyPos{
-        z-index: 99;
-        padding: 0 ;
-        border: 0px solid silver;
-        position: absolute;
-        top:85vh;
-        left:2vh;
+}
 
-    }
+#showMyPos {
+    z-index: 99;
+    padding: 0;
+    border: 0px solid silver;
+    position: absolute;
+    top: 85vh;
+    left: 2vh;
+
+}
 </style>
+</head>
 <body style="overflow: hidden;margin: 0;padding: 0;">
 
-<div id="container"  >
+<div id="container">
 
 
 </div>
 <div id="searchStat">
-    <span  onclick="getCurrentGps();" style="font-size: 25px;" class="ion-refresh" data-pack="default" data-tags="gps, navigation, pin"></span>
+<span onclick="refreshInfo ();" style="font-size: 25px;" class="ion-refresh" data-pack="default"
+data-tags="gps, navigation, pin"></span>
 </div>
 <div id="showMyPos">
-    <span  onclick="getCurrentGps();" style="font-size: 25px;" class="ion-navigate" data-pack="default" data-tags="gps, navigation, pin"></span>
+<span onclick="showCurrentGps();" style="font-size: 25px;" class="ion-navigate" data-pack="default"
+data-tags="gps, navigation, pin"></span>
 </div>
 </body>
 <script>
 
-    var map = new AMap.Map('container', {
-        resizeEnable: true,
-        center: [116.397428, 39.90923],
-        zoom: 4
-    });
+    var map,carMark;
+        function onDeviceReady() {
+            console.log("navigator.geolocation works well");
+            getGpsInfo(
+                    function(position){
+                        var pos = [position.coords.longitude,position.coords.latitude];
+                        map= new AMap.Map('container', {
+                            resizeEnable: true,
+                            center: pos,
+                            zoom: 16
+                        });
+                        carMark = new AMap.Marker({
+                            icon: "img/car.png",
+                            position: pos
+                        });
+                        carMark.setMap(map);
+                        map.setCenter(pos);
+                    }
+            );
+        }
 
-    function getCurrentGps(){
-         alert('1111');
+        if(!window.device){
+            window.onload = onDeviceReady;
+            console.log('===>> window.device');
+        }else{
+            document.addEventListener("deviceready", onDeviceReady, true);
+            navigator.geolocation.watchPosition(showCurrentGps, null, { timeout: 30000 });
+            console.log('===>> document.addEventListener');
+        }
 
 
 
+
+
+
+function refreshInfo() {
+    alert('refreshInfo');
+
+}
+
+function showCurrentGps() {
+    var gpsInfo = getGpsInfo(
+        function(position){
+            var pos = [position.coords.longitude,position.coords.latitude];
+          //  alert('OK..'+pos);
+            carMark.setPosition(pos);
+            map.setCenter(pos);
+        }
+    );
+
+}
+
+
+function getGpsInfo(onSuccess) {
+    function onError(error) {
+        alert('code: ' + error.code + '\n' +
+        'message: ' + error.message + '\n');
     }
-
+    navigator.geolocation.getCurrentPosition(onSuccess, onError, {timeout: 10000, enableHighAccuracy: false});
+}
 
 
 </script>
+
+</html>

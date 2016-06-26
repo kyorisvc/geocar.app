@@ -56,22 +56,18 @@ angular.module('ionicApp', ['ionic','ngCordova'] )
 
     .controller('HomeTabCtrl', function ($scope, $cordovaLocalNotification,$timeout,$cordovaGeolocation) {
 
-      $scope.$watch('$viewContentLoaded', function() {
-        alert('1');
-        var posOptions = {timeout: 10000, enableHighAccuracy: false};
-        $cordovaGeolocation
-            .getCurrentPosition(posOptions)
-            .then(function (position) {
-              var lat  = position.coords.latitude
-              var long = position.coords.longitude
-              alert(lat);
-            }, function(err) {
-              alert('error'+err);
-            });
-      });
-
-
-
+      //$scope.$watch('$viewContentLoaded', function() {
+      //  var posOptions = {timeout: 10000, enableHighAccuracy: false};
+      //  $cordovaGeolocation
+      //      .getCurrentPosition(posOptions)
+      //      .then(function (position) {
+      //        var lat  = position.coords.latitude
+      //        var long = position.coords.longitude
+      //        alert(lat);
+      //      }, function(err) {
+      //        alert('error'+err);
+      //      });
+      //});
 
 
 
