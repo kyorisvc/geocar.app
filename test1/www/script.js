@@ -129,8 +129,12 @@ angular.module('ionicApp', ['ionic', 'ngCordova' ])
 
 
         $scope.checkBlackCustomer = function () {
+            var phoneNbr =  $scope.sendMsg.phoneNbr;
+            if(!isDigit(phoneNbr)) {
+                showAlert('号码格式错误!', '请输入正确的手机号码!');
+                return;
+            }
             $scope.show();
-
             var url = 'app/blackCustomer/checkPhoneNbr/' + $scope.sendMsg.phoneNbr;
             var param = {};
             ajax("GET", url, param, function (resp) {
@@ -143,10 +147,21 @@ angular.module('ionicApp', ['ionic', 'ngCordova' ])
             });
 
         }
+        function isDigit(s)
+        {
+            var patrn=/^1[0-9]{10}$/;
+            if (!patrn.exec(s)) return false
+            return true
+        }
         $scope.submitBlackCustomer = function () {
+           var phoneNbr =  $scope.sendMsg.phoneNbr;
+           if(!isDigit(phoneNbr)) {
+               showAlert('号码格式错误!', '请输入正确的手机号码!');
+               return;
+           }
             $scope.show();
             var url = 'app/blackCustomer';
-            var param = {"phoneNumber": $scope.sendMsg.phoneNbr, "infoType": "1", "createDeviceId": $rootScope.uuid};
+            var param = {"phoneNumber": phoneNbr, "infoType": "1", "createDeviceId": $rootScope.uuid};
             ajax("POST", url, param, function () {
                 $scope.hide();
                 showAlert('感谢您上报信息!', '提交成功!');
@@ -270,7 +285,7 @@ angular.module('ionicApp', ['ionic', 'ngCordova' ])
 
         $scope.addNotification = function (msgSrc) {
             var msg = msgSrc.data;
-            var title = msg.infoType == "1" ? '风险信息' : '拥堵信息';
+            var title = msg.infoType == "1" ? '风险' : '拥堵';
             var pos = JSON.parse(msg["position"]);
             var transLocalPara = {
                 'locations': pos.lng + ',' + pos.lat,
@@ -284,6 +299,7 @@ angular.module('ionicApp', ['ionic', 'ngCordova' ])
                     'key': '1641d880ed8778250a8d78a20fe0c48d'
                 }
                 doAjax('GET', "http://restapi.amap.com/v3/geocode/regeo", chinesePara, function (data) {
+                    play(data.regeocode.formatted_address + "存在" + title);
                     var event = {
                         id: Math.floor(Math.random() * 5 + 1),
                         title: title,
@@ -293,6 +309,7 @@ angular.module('ionicApp', ['ionic', 'ngCordova' ])
                         $cordovaLocalNotification.schedule(event).then(function () {
                         });
                     }, false);
+
                 });
 
 
