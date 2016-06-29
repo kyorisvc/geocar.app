@@ -15,8 +15,10 @@
     <script src="lib/ngCordova/dist/ng-cordova.js"></script>
     <!-- cordova script (this will be a 404 during development) -->
     <script src="cordova.js"></script>
+    <script src="js/sockjs-0.3.4.js"></script>
+    <script src="js/stomp.js"></script>
+    <script src="js/service/commFunService.js"></script>
     <script src="script.js"></script>
-
 
     <style>
         /*.tabs-background-dark .tabs,*/
@@ -79,10 +81,10 @@
                            ng-model="sendMsg.phoneNbr">
                 </div>
                 <div  style="clear: both;padding-top: 20px;text-align: center;margin-top: 15vh;  " >
-                    <button   onclick=" " class="button button-balanced"  style="width:30vw;">验证</button>
+                    <button   ng-click="checkBlackCustomer();" class="button button-balanced"  style="width:30vw;">验证</button>
                 </div>
                 <div  style="clear: both;padding-top: 20px;text-align: center;margin-top: 10vh;  ">
-                    <button   onclick=" " class="button button-balanced" style="width:30vw;">举报</button>
+                    <button   ng-click="submitBlackCustomer();" class="button button-balanced" style="width:30vw;">举报</button>
                 </div>
 
 
@@ -97,16 +99,14 @@
     <ion-view title="风险">
         <ion-content>
 
-
-
             <div class="list" style="margin-top: 5vh;">
 
-                <ion-radio ng-repeat="item in clientSideList" ng-value="item.value" ng-model="data.clientSide">
+                <ion-radio ng-repeat="item in clientSideList" ng-value="item.value" ng-model="roadCondition.infoType">
                     {{ item.text }}
                 </ion-radio>
 
                 <div  style="clear: both;padding-top: 20px;text-align: center;margin-top: 15vh;  " >
-                    <button   onclick=" " class="button button-balanced"  style="width:30vw;">验证</button>
+                    <button   ng-click="submitRoadCondition();" class="button button-balanced"  style="width:30vw;">上报</button>
                 </div>
 
             </div>

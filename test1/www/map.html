@@ -38,28 +38,34 @@
 
 </div>
 <div id="searchStat">
-<span onclick="refreshInfo ();" style="font-size: 25px;" class="ion-refresh" data-pack="default"
+<span id="refresh" onclick="refreshInfo ();" style="font-size: 30px;" class="ion-refresh" data-pack="default"
       data-tags="gps, navigation, pin"></span>
 </div>
 <div id="showMyPos">
-<span onclick="showCurrentGps();" style="font-size: 25px;" class="ion-navigate" data-pack="default"
+<span id="pos" onclick="showCurrentGps();" style="font-size: 30px;" class="ion-navigate" data-pack="default"
       data-tags="gps, navigation, pin"></span>
 </div>
 </body>
 <script>
-
-    var map, carMark;
+    var baseurl = 'http://114.215.91.56:8080/';
+    var map, carMark, uuid;
+    var RoadmarkOption;
+    var icon = {"1": "img/danger.png", "2": "img/traffic.png"};
     function onDeviceReady() {
         console.log("deviceready works well");
-        if(typeof AMap == 'undefined'){
+        if (typeof AMap == 'undefined') {
             window.location.reload();
-        }else{
-            map = new AMap.Map('container', {
-                resizeEnable: true,
-                //center: {},
-                zoom: 16
-            });
-            init();
+        } else {
+            try{
+                map = new AMap.Map('container', {
+                    resizeEnable: true,
+                    zoom: 16
+                });
+                init();
+            }catch(e){
+                window.location.reload();
+            }
+
         }
 
     }
@@ -68,7 +74,7 @@
         console.log('===>> window.device');
     } else {
         document.addEventListener("deviceready", onDeviceReady, true);
-         console.log('===>> document.addEventListener');
+        console.log('===>> document.addEventListener');
     }
 
     function postmessageFunc(info) {
@@ -80,86 +86,208 @@
             return;
         //确保发送消息的域名是已知的域名
         var msg = event.data["msgKey"];
-        AMap.convertFrom(event.data.data,'gps',function(status,result){
-            if(status="complete"){
-                postObj()[msg](result["locations"][0]);
-            }else{
-                alert(result);
-            }
-        });
+        postObj()[msg](event.data);
 
     });
 
+    function gpsToAmapPos(data, callFunc) {
+        AMap.convertFrom(data, 'gps', callFunc);
+    }
+    var gpsToAmapPosIncludeInfo =function(descInfo){
+        this.descInfo = descInfo;
+        this.transfer = function(data, callFunc){
+            gpsToAmapPos(data, callFunc);
+        }
+    }
 
-
-    var postObj = function(){
-        var initMap = function (position) {
-            var pos = [position.lng, position.lat];
-            carMark = new AMap.Marker({
-                icon: "img/car.png",
-                position: pos
+    var postObj = function () {
+        var initMap = function (info) {
+            uuid = info["uuid"];
+            gpsToAmapPos(info.data, function (status, result) {
+                var pos;
+                if (status = "complete") {
+                    pos = result["locations"][0];
+                    carMark = new AMap.Marker({
+                        icon: "img/car.png",
+                        zIndex:999,
+                        position: pos
+                    });
+                    carMark.setMap(map);
+                    map.setCenter(pos);
+                } else {
+                    alert(result);
+                }
+                Zepto("#pos").attr("class", "ion-navigate");
             });
-            carMark.setMap(map);
-            map.setCenter(pos);
+
         };
         var carMove = function (position) {
-            var pos = [position.lng, position.lat];
-            if(!carMark){
+            if (!carMark) {
                 carMark = new AMap.Marker({
                     icon: "img/car.png",
-                    position:[116.397428, 39.90923]
+                    position: [116.397428, 39.90923]
                 });
                 carMark.setMap(map);
             }
-            carMark.setPosition(pos);
-            map.setCenter(pos);
+            gpsToAmapPos(position.data, function (status, result) {
+                var pos;
+                if (status = "complete") {
+                    pos = result["locations"][0];
+                    carMark.setPosition( new AMap.LngLat(pos["lng"],pos["lat"]));
+                    map.setCenter(pos);
+                } else {
+                    alert(result);
+                }
+                Zepto("#pos").attr("class", "ion-navigate");
+            });
         };
         var gpsGetError = function onError(error) {
             alert('code: ' + error.code + '\n' +
             'message: ' + error.message + '\n');
+            Zepto("#pos").attr("class", "ion-navigate");
         };
 
-        return {"carMove":carMove,"gpsGetError":gpsGetError,"initMap":initMap};
+        var notifyRoadInfo = function(info){
+            var currentMark = RoadmarkOption.getCurrentMark();
+            var roadInfo =info["data"];
+            currentMark[roadInfo["id"]] = roadInfo;
+            RoadmarkOption.setIcon(icon);
+            RoadmarkOption.addMark();
+        }
+        return {"carMove": carMove, "gpsGetError": gpsGetError, "initMap": initMap,"notifyRoadInfo":notifyRoadInfo};
     };
 
-    function showCurrentGps() {
+    function showCurrentGps(_this) {
+        Zepto("#pos").attr("class", "ion-load-d");
         var info = {"msgKey": "carMove"};
         postmessageFunc(info);
     }
     function init() {
+        RoadmarkOption = new markOption();
         var info = {"msgKey": "initMap"};
         postmessageFunc(info);
     }
 
 
-
     function refreshInfo() {
-        alert('refreshInfo');
+        var url = 'geocar.api/app/RoadCondition/all';
+        get(url, null, function (data) {
+            RoadmarkOption.updateMarkArray(data);
+            RoadmarkOption.removeMark();
+            RoadmarkOption.setIcon(icon);
+            RoadmarkOption.addMark(icon);
+            Zepto("#refresh").attr("class", "ion-refresh");
+        }, function () {
+            Zepto("#refresh").attr("class", "ion-load-d");
+        }, function (xhr, type) {
+            Zepto("#refresh").attr("class", "ion-refresh");
+        });
+    }
+
+
+    function markOption() {
+        this.icon;
+        this.data;
+        this.removeMarkMap = {};
+        this.currentMark = {};
+        this.markInMap = {};
+        this.setRemoveMarkMap = function(removeMarkMap){
+            this.removeMarkMap = removeMarkMap;
+        };
+        this.setCurrentMark = function(currentMark){
+            this.currentMark = currentMark;
+        }
+        this.getCurrentMark = function(){
+            return  this.currentMark;
+        }
+        this.setMarkInMap = function(markInMap){
+            this.markInMap = markInMap;
+        }
+        this.setIcon = function(icon){
+            this.icon = icon;
+        }
+    }
+
+    markOption.prototype.updateMarkArray = function (data) {
+        this.data = data;
+        this.removeMarkMap = {};
+        var midMark = {};
+        for (var i = 0; i < this.data.length; i++) {
+            var tpMarkId = this.data[i]["id"];
+            var markTp = this.currentMark[tpMarkId];
+            if (markTp) {
+                this.data[i]["exists"] = true;
+                delete this.currentMark[tpMarkId];
+            }
+            midMark[tpMarkId] = this.data[i];
+        }
+        this.removeMarkMap = this.currentMark;
+        this.currentMark = midMark;
+    }
+
+    markOption.prototype.removeMark = function () {
+        for (var m in this.removeMarkMap) {
+            var mark = this.markInMap[m];
+            if (mark) {
+                mark.setMap(null);
+                delete this.markInMap[m];
+            }
+        }
+    }
+
+
+    markOption.prototype.addMark = function () {
+        var icon =this.icon;
+        var markInMap = this.markInMap;
+         for (var m in this.currentMark) {
+            var tpMark = this.currentMark[m];
+            if (!tpMark["exists"]) {
+                tpMark["exists"] = true;
+                var pos = JSON.parse(tpMark["position"]);
+                var trans = new gpsToAmapPosIncludeInfo(tpMark);
+                var callback = function (status, result) {
+                    if (status = "complete") {
+                        pos = result["locations"][0];
+                        var mark = new AMap.Marker({
+                            icon: icon[arguments.callee.mark["infoType"]],
+                            position: pos
+                        });
+                        mark.setMap(map);
+                        markInMap[arguments.callee.mark["id"]] = mark;
+                    } else {
+                        alert(result);
+                    }
+                };
+                callback.mark = tpMark;
+                trans.transfer([parseFloat(pos["lng"]), parseFloat(pos["lat"])],callback);
+            }
+        }
+    }
+
+    function get(url, param, success, before, error) {
 
         Zepto.ajax({
             type: 'GET',
-            url: 'http://restapi.amap.com/v3/assistant/coordinate/convert',
-            data: 'locations=108.92465692120639,34.21819530755288&coordsys=gps&key=1641d880ed8778250a8d78a20fe0c48d',
+            url: baseurl + url,
+            data: param,
             dataType: 'json',
             timeout: 5000,
             success: function (data) {
-                alert(data);
+                success(data);
             },
-            beforeSend:function(){
-
+            beforeSend: function () {
+                before();
             },
-            complete:function(){
+            complete: function () {
 
             },
             error: function (xhr, type) {
-                alert('ERROR!'+type );
+                alert('ERROR!' + type);
+                error(xhr, type);
 
             }
         });
-
-
     }
-
 
 </script>
 
